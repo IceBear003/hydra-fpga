@@ -2,10 +2,10 @@ module port_wr_sram_matcher(
     input clk,
     input rst_n,
 
-    input [4:0] match_threshold,
+    input [3:0] match_threshold,
 
     /* 与前端交互的信号 */
-    input [5:0] new_length,
+    input [4:0] new_length,
     input match_enable,
     input xfer_ready,
     output reg match_suc,
@@ -18,11 +18,11 @@ module port_wr_sram_matcher(
      * |- free_space - SRAM剩余空间（半字）
      * |- packet_amount - SRAM中新包端口对应的数据包数量
      */
-    input [4:0] match_sram,
-    output reg [5:0] match_best_sram,
+    input [3:0] match_sram,
+    output reg [4:0] match_best_sram,
     input accessible,
-    input [10:0] free_space,
-    input [8:0] packet_amount
+    input [7:0] free_space,
+    input [5:0] packet_amount
 );
 
 /* 
@@ -40,8 +40,8 @@ reg [1:0] match_state;
  * |- max_amount - 当前最优SRAM中目的端口的数据量
  */
 reg match_find;
-reg [7:0] match_tick;
-reg [8:0] max_amount;
+reg [6:0] match_tick;
+reg [5:0] max_amount;
 
 always @(posedge clk) begin
     if(~rst_n) begin
@@ -71,7 +71,7 @@ always @(posedge clk) begin
     if(~match_enable || xfer_ready) begin
         match_find <= 0;
         max_amount <= 0;
-        match_best_sram <= 6'd32;
+        match_best_sram <= 5'd16;
     end else if(~accessible) begin                  /* 未被占用 */
     end else if(free_space < new_length + 1) begin  /* 空间足够 */
     end else if(packet_amount >= max_amount) begin  /* 比当前更优 */

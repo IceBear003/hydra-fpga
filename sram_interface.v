@@ -6,9 +6,9 @@ module sram_interface
     input rst_n,
 
     /* time_stamp - 时间戳 */
-    input [4:0] time_stamp,
+    input [3:0] time_stamp,
     /* sram_idx - SRAM编号 */
-    input [4:0] sram_idx,
+    input [3:0] sram_idx,
 
     /* 
      * 写入传输数据IO 
@@ -30,11 +30,11 @@ module sram_interface
      * |- join_tail - 入队请求尾页地址
      */
     output reg join_enable,
-    output reg [5:0] join_time_stamp,
-    output reg [4:0] join_dest_port,
-    output reg [2:0] join_prior,
-    output reg [10:0] join_head,
-    output reg [10:0] join_tail,
+    output reg [4:0] join_time_stamp,
+    output reg [2:0] join_dest_port,
+    output reg [1:0] join_prior,
+    output reg [7:0] join_head,
+    output reg [7:0] join_tail,
 
     /*
      * 拼接请求 
@@ -43,8 +43,8 @@ module sram_interface
      * |- concatenate_tail - 拼接请求尾页地址
      */
     input concatenate_enable,
-    input [10:0] concatenate_head,
-    input [15:0] concatenate_tail,
+    input [7:0] concatenate_head,
+    input [11:0] concatenate_tail,
 
     /* 
      * 读出传输数据IO
@@ -55,31 +55,21 @@ module sram_interface
      * |- rd_ecc_code - 读出页的(136,128)ECC校验码
      */
     input rd_page_down,
-    input [10:0] rd_page,
+    input [7:0] rd_page,
     output [15:0] rd_xfer_data,
-    output [15:0] rd_next_page,
+    output [11:0] rd_next_page,
     output [7:0] rd_ecc_code,
 
     /* free_space - 剩余空间（单位:页） */
-    output reg [10:0] free_space
-    
-    /* SRAM读写IO
-    ,
-    (*DONT_TOUCH="YES"*) output wr_en,
-    (*DONT_TOUCH="YES"*) output [13:0] wr_addr,
-    (*DONT_TOUCH="YES"*) output [15:0] din,
-    (*DONT_TOUCH="YES"*) output rd_en,
-    (*DONT_TOUCH="YES"*) output [13:0] rd_addr,
-    (*DONT_TOUCH="YES"*) input [15:0] dout
-    */
+    output reg [7:0] free_space
 );
 
 /* ECC编码存储 8×2048 RAM */
-(* ram_style = "block" *) reg [7:0] ecc_codes [2047:0];
+(* ram_style = "block" *) reg [7:0] ecc_codes [255:0];
 reg ec_wr_en;
-reg [10:0] ec_wr_addr;
+reg [7:0] ec_wr_addr;
 wire [7:0] ec_din;
-wire [10:0] ec_rd_addr;
+wire [7:0] ec_rd_addr;
 reg [7:0] ec_dout;
 always @(posedge clk) if(ec_wr_en) ecc_codes[ec_wr_addr] <= ec_din;
 always @(posedge clk) ec_dout <= ecc_codes[ec_rd_addr];
@@ -87,21 +77,21 @@ always @(posedge clk) ec_dout <= ecc_codes[ec_rd_addr];
 reg [15:0] ecc_encoder_buffer [7:0];
 
 /* 跳转表 16×2048 RAM */
-(* ram_style = "block" *) reg [15:0] jump_table [2047:0];
-reg [10:0] jt_wr_addr;
-reg [15:0] jt_din;
-wire [10:0] jt_rd_addr;
-reg [15:0] jt_dout;
+(* ram_style = "block" *) reg [11:0] jump_table [255:0];
+reg [7:0] jt_wr_addr;
+reg [11:0] jt_din;
+wire [7:0] jt_rd_addr;
+reg [11:0] jt_dout;
 always @(posedge clk) jump_table[jt_wr_addr] <= jt_din;
 always @(posedge clk) jt_dout <= jump_table[jt_rd_addr];
 
 /* 空闲队列 11×2048 RAM */
-(* ram_style = "block" *) reg [10:0] null_pages [2047:0];
-reg [10:0] np_wr_addr;
-reg [10:0] np_din;
+(* ram_style = "block" *) reg [7:0] null_pages [255:0];
+reg [7:0] np_wr_addr;
+reg [7:0] np_din;
 always @(posedge clk) null_pages[np_wr_addr] <= np_din;
-wire [10:0] np_rd_addr;
-reg [10:0] np_dout;
+wire [7:0] np_rd_addr;
+reg [7:0] np_dout;
 always @(posedge clk) np_dout <= null_pages[np_rd_addr];
 
 /*
@@ -110,9 +100,9 @@ always @(posedge clk) np_dout <= null_pages[np_rd_addr];
  * |- np_tail_ptr - 空闲队列的尾指针
  * |- np_perfusion - 空闲队列的灌注进度
  */
-reg [10:0] np_head_ptr;
-reg [10:0] np_tail_ptr;
-reg [11:0] np_perfusion;
+reg [7:0] np_head_ptr;
+reg [7:0] np_tail_ptr;
+reg [8:0] np_perfusion;
 
 /*
  * 写入机制
@@ -123,7 +113,7 @@ reg [11:0] np_perfusion;
  *             |- 1 - 正在写入数据包的第一页
  *             |- 2 - 正在写入数据包的后续页
  */
-reg [10:0] wr_page;
+reg [7:0] wr_page;
 reg [2:0] wr_batch;
 reg [1:0] wr_state;
 
@@ -193,7 +183,7 @@ assign rd_next_page = jt_dout;
 
 /* 尾部预测 & 顶部空页地址查询 */
 assign np_rd_addr = (wr_state == 2'd0 && wr_xfer_data_vld) 
-                    ? np_head_ptr + wr_xfer_data[15:10]                 /* 在数据包刚开始传输时预测数据包尾页地址 */
+                    ? np_head_ptr + wr_xfer_data[11:7]                 /* 在数据包刚开始传输时预测数据包尾页地址 */
                     : np_head_ptr;                                      /* 其他时间查询顶部空页地址 */
 
 /* 从空闲队列中取出空闲页 */
@@ -214,7 +204,7 @@ always @(posedge clk) begin
         np_tail_ptr <= np_tail_ptr + 1;
         np_wr_addr <= np_tail_ptr;
         np_din <= rd_page;
-    end else if(np_perfusion != 12'd2048) begin                         /* 灌注到2047结束 */
+    end else if(np_perfusion != 9'd256) begin                         /* 灌注到2047结束 */
         np_tail_ptr <= np_tail_ptr + 1;
         np_wr_addr <= np_tail_ptr;
         np_din <= np_perfusion;
@@ -255,17 +245,17 @@ end
 always @(posedge clk) begin
     join_enable <= wr_state == 2'd0 && wr_xfer_data_vld;                /* 发起入队请求 */
     if(~rst_n) begin
-        join_time_stamp <= 6'd34;
+        join_time_stamp <= 5'd17;
         join_dest_port <= 0;
         join_prior <= 0;
         join_head <= 0;
     end else if(wr_state == 2'd0 && wr_xfer_data_vld) begin             /* 生成入队请求基本信息 */
-        join_time_stamp <= {1'b0, time_stamp + 5'd1};                   /* 与主模块中时间序列新插入的时间戳同步 */
-        join_dest_port <= wr_xfer_data[3:0];
-        join_prior <= wr_xfer_data[6:4];
+        join_time_stamp <= {1'b0, time_stamp + 4'd1};                   /* 与主模块中时间序列新插入的时间戳同步 */
+        join_dest_port <= wr_xfer_data[1:0];
+        join_prior <= wr_xfer_data[3:2];
         join_head <= wr_page;
-    end else if(time_stamp[3:0] == join_time_stamp[3:0] && ~(wr_state == 2'd1 && wr_batch == 3'd1)) begin
-        join_time_stamp <= 6'd34;                                       /* 16周期后销毁入队请求 */
+    end else if(time_stamp[2:0] == join_time_stamp[2:0] && ~(wr_state == 2'd1 && wr_batch == 3'd1)) begin
+        join_time_stamp <= 5'd17;                                       /* 16周期后销毁入队请求 */
     end
     if(wr_state == 2'd1 && wr_batch == 3'd1) begin                      /* 尾部预测完成后追加入队请求的数据包尾页地址 */
         join_tail <= np_dout;
@@ -287,14 +277,14 @@ end
 reg [6:0] packet_length;                                                /* 7位是防止最大包长的数据包溢出，导致free_space不正常减少 */
 always @(posedge clk) begin
     if(wr_state == 2'd0 && wr_xfer_data_vld) begin
-        packet_length <= wr_xfer_data[15:10] + 1;
+        packet_length <= wr_xfer_data[11:7] + 1;
     end
 end 
 
 /* 剩余空间更新 */
 always @(posedge clk) begin
     if(~rst_n) begin
-        free_space <= 11'd2047;
+        free_space <= 8'd255;
     end 
     else if(join_enable && rd_page_down) begin
         free_space <= free_space - packet_length + 1;
@@ -315,12 +305,5 @@ sram sram(
     .rd_addr({rd_page, rd_page_down ? 3'd0 : rd_batch[2:0]}),   /* 翻页时，切片编号应为0，其他时刻则为rd_addr_batch */
     .dout(rd_xfer_data)
 ); 
-
-// assign wr_en = wr_xfer_data_vld;
-// assign wr_addr = {wr_page, wr_batch};
-// assign din = wr_xfer_data;
-// assign rd_en = rd_page_down || rd_batch != 4'd8;
-// assign rd_addr = {rd_page, rd_page_down ? 3'd0 : rd_batch[2:0]};
-// assign rd_xfer_data = dout;
 
 endmodule
