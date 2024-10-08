@@ -30,8 +30,8 @@ module port_wr_frontend(
      */
     input match_suc,
     output reg match_enable,
-    output reg [3:0] match_dest_port,
-    output reg [8:0] match_length
+    output reg [1:0] match_dest_port,
+    output reg [7:0] match_length
 );
 
 /*
@@ -51,7 +51,7 @@ reg [1:0] wr_state;
  */
 reg [1:0] xfer_state;
 
-/* 前端缓冲区
+/* 前端缓冲区 TODO 应该可以缩小，有待测试
  * |- buffer - 缓冲区 16×64 FIFO
  * |- wr_ptr - 写入指针
  * |- xfer_ptr - 传输指针
@@ -68,7 +68,7 @@ wire [5:0] wr_ptr_pls_3 = wr_ptr + 6'd3;
 wire [5:0] xfer_ptr_pls_1 = xfer_ptr + 6'd1;
 
 /* wr_length - 数据包长度，用于更新包尾指针 */
-reg [8:0] wr_length;
+reg [7:0] wr_length;
 
 /* 
  * pst_match_suc - 匹配成功信号持久化
@@ -120,8 +120,8 @@ always @(posedge clk) begin
         buffer[wr_ptr] <= wr_data;
         wr_ptr <= wr_ptr + 1;
         if (wr_state == 2'd1) begin                 /* 在写入数据包第一个半字时，载入数据包的目的端口与长度信息 */
-            match_dest_port <= wr_data[3:0];
-            match_length <= wr_data[15:7];
+            match_dest_port <= wr_data[1:0];
+            match_length <= wr_data[11:4];
         end
     end
 end
