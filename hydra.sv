@@ -155,24 +155,24 @@ encoder_16_4 encoder_16_4(
  * |- concatenate_heads - 拼接请求首页
  * |- concatenate_tails - 拼接请求尾页
  * |- concatenate_select - 拼接请求选通信号
- * |- concatenate_port - 正在处理的拼接请求的发起端口
- * |- concatenate_head - 正在处理的拼接请求的头部
- * |- concatenate_tail - 正在处理的拼接请求的尾部
+ * |- processing_concatenate_port - 正在处理的拼接请求的发起端口
+ * |- processing_concatenate_head - 正在处理的拼接请求的头部
+ * |- processing_concatenate_tail - 正在处理的拼接请求的尾部
  */
 wire concatenate_enables [3:0];
 wire [11:0] concatenate_heads [4:0];
 wire [11:0] concatenate_tails [4:0];
 wire [3:0] concatenate_select = {concatenate_enables[3] == 1, concatenate_enables[2] == 1, concatenate_enables[1] == 1, concatenate_enables[0] == 1}; 
-wire [2:0] concatenate_port;
-wire [11:0] concatenate_head = concatenate_heads[concatenate_port];
-wire [11:0] concatenate_tail = concatenate_tails[concatenate_port];
+wire [2:0] processing_concatenate_port;
+wire [11:0] processing_concatenate_head = concatenate_heads[processing_concatenate_port];
+wire [11:0] processing_concatenate_tail = concatenate_tails[processing_concatenate_port];
 assign concatenate_heads[4] = 0;
 assign concatenate_tails[4] = 0;
 
 /* 由拼接请求选通信号得到正在处理的拼接请求的发起端口 */
 encoder_4_2 encoder_concatenate(
     .select(concatenate_select),
-    .idx(concatenate_port)
+    .idx(processing_concatenate_port)
 );
 
 genvar port;
@@ -654,9 +654,9 @@ generate for(sram = 0; sram < 16; sram = sram + 1) begin : SRAMs
         .join_head(join_heads[sram]),
         .join_tail(join_tails[sram]),
 
-        .concatenate_enable(concatenate_head[11:8] == sram && concatenate_select != 0),
-        .concatenate_head(concatenate_head[7:0]), 
-        .concatenate_tail(concatenate_tail),
+        .concatenate_enable(processing_concatenate_head[11:8] == sram && concatenate_select != 0),
+        .concatenate_head(processing_concatenate_head[7:0]), 
+        .concatenate_tail(processing_concatenate_tail),
 
         .rd_page_down(rd_page_down),
         .rd_page(rd_page),
@@ -694,19 +694,20 @@ always @(posedge clk) begin
     if(!rst_n) begin
         processing_join_mask <= 17'h1FFFF;
         join_fifo_head_ptr <= 0;
-    end else if(processing_join_select_masked == processing_join_one_hot_masks[processing_join] && join_fifo_head_ptr != join_fifo_tail_ptr) begin
+        processing_join_select <= 16'h0000;
+    end else if(join_fifo_head_ptr == join_fifo_tail_ptr) begin
+        processing_join_select <= 16'h0000;
+    end else if(processing_join_select_masked == processing_join_one_hot_masks[processing_join]) begin
         processing_join_mask <= 17'h1FFFF;                  /* 正在处理的时间戳对应的入队请求仅剩一个，轮换到下一个时间戳 */
         join_fifo_head_ptr <= join_fifo_head_ptr + 1;
+        if(join_fifo_head_ptr + 1 == join_fifo_tail_ptr) begin
+            processing_join_select <= 16'h0000;
+        end else begin
+            processing_join_select <= join_fifo[join_fifo_head_ptr + 1];
+        end
     end else begin
         processing_join_mask[processing_join] <= 0;         /* 正常处理完一个入队请求，拉低掩码对应位置，防止重复入队 */
-    end
-end
-
-always @(posedge clk) begin
-    if(join_fifo_head_ptr != join_fifo_tail_ptr) begin
         processing_join_select <= join_fifo[join_fifo_head_ptr];
-    end else begin
-        processing_join_select <= 16'h0000;
     end
 end
 

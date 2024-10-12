@@ -177,6 +177,7 @@ end
 
 always @(posedge clk) begin
     if(~rst_n) begin
+        xfer_data <= 0;
         xfer_ptr <= 0;
         xfer_data_vld <= 0;
     end else if(xfer_state == 2'd1) begin
