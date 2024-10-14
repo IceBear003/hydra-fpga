@@ -36,7 +36,7 @@ function void my_model::build_phase(uvm_phase phase);
 endfunction
 
 task my_model::main_phase(uvm_phase phase);
-    15my_transaction tr[4];
+    my_transaction tr[4];
     my_transaction rd_tr[4];
     my_transaction sd_tr[4];
     my_transaction rd_get[4];
