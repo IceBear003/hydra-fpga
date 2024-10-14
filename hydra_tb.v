@@ -72,7 +72,7 @@ module tb_test;
         #10 
         wr_sop <= 4'h0;
         wr_vld <= 4'h3;
-        wr_data <= {{8'd31, 2'd1, 2'd3}, {8'd31, 2'd1, 2'd3}};
+        wr_data <= {{4'd0, 8'd31, 2'd1, 2'd3}, {4'd0, 8'd31, 2'd1, 2'd3}};
         cnt <= 0;
         for(i=0;i<31;i=i+1) begin
             #10 
