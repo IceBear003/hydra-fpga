@@ -169,12 +169,15 @@ always @(posedge clk) begin
     if(concatenate_enable) begin                                        /* 不同数据包间跳转表的拼接 */
         jt_wr_addr <= concatenate_head;
         jt_din <= concatenate_tail;
+    // end else if(wr_state == 2'd1 && wr_batch == 3'd2) begin
+    //     jt_wr_addr <= join_tail;
+    //     jt_din <= {sram_idx, join_tail};
     // end else if(wr_end_of_packet) begin                              /* 数据包尾页指向自身 */
     end else if(~wr_xfer_data_vld) begin
     end else if(wr_page != join_tail) begin                             /* 数据包内相邻两页的拼接 */
         jt_wr_addr <= wr_page;
         jt_din <= {sram_idx, np_dout};
-    end 
+    end
 end
 
 /* 从跳转表中读取当前页的下一页地址 */
