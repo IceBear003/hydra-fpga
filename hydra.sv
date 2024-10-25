@@ -52,6 +52,7 @@ always @(posedge clk) time_stamp <= ~rst_n ? 0 : time_stamp + 1;
 reg [15:0] join_fifo [15:0];
 reg [3:0] join_fifo_head_ptr;
 reg [3:0] join_fifo_tail_ptr;
+wire [3:0] join_fifo_head_ptr_pls = join_fifo_head_ptr + 1;
 
 /* 
  * 统计信息 
@@ -558,6 +559,16 @@ generate for(port = 0; port < 4; port = port + 1) begin : Ports
             packet_amounts[rd_sram] <= packet_amounts[rd_sram] - 1;
         end
     end
+
+    wire [11:0] debug_tail_0 = queue_tail[0];
+    wire [11:0] debug_tail_1 = queue_tail[1];
+    wire [11:0] debug_tail_2 = queue_tail[2];
+    wire [11:0] debug_tail_3 = queue_tail[3];
+
+    wire [11:0] debug_head_0 = queue_head[0];
+    wire [11:0] debug_head_1 = queue_head[1];
+    wire [11:0] debug_head_2 = queue_head[2];
+    wire [11:0] debug_head_3 = queue_head[3];
 end endgenerate
 
 genvar sram;
@@ -699,11 +710,11 @@ always @(posedge clk) begin
         processing_join_select <= 16'h0000;
     end else if(processing_join_select_masked == processing_join_one_hot_masks[processing_join]) begin
         processing_join_mask <= 17'h1FFFF;                  /* 正在处理的时间戳对应的入队请求仅剩一个，轮换到下一个时间戳 */
-        join_fifo_head_ptr <= join_fifo_head_ptr + 1;
-        if(join_fifo_head_ptr + 1 == join_fifo_tail_ptr) begin
+        join_fifo_head_ptr <= join_fifo_head_ptr_pls;
+        if(join_fifo_head_ptr_pls == join_fifo_tail_ptr) begin
             processing_join_select <= 16'h0000;
         end else begin
-            processing_join_select <= join_fifo[join_fifo_head_ptr + 1];
+            processing_join_select <= join_fifo[join_fifo_head_ptr_pls];
         end
     end else begin
         processing_join_mask[processing_join] <= 0;         /* 正常处理完一个入队请求，拉低掩码对应位置，防止重复入队 */
