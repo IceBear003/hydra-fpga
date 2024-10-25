@@ -25,7 +25,7 @@ endfunction
 
 function void my_model::build_phase(uvm_phase phase);
     super.build_phase(phase);
-    for(int i=0; i<16; i=i+1) begin
+    for(int i=0; i<4; i=i+1) begin
         port[i] = new($sformatf("port[%0d]", i),this);
         act_port[i] = new($sformatf("act_port[%0d]", i),this);
         ready[i] = new($sformatf("ready[%0d]", i),this);
@@ -41,7 +41,7 @@ task my_model::main_phase(uvm_phase phase);
     my_transaction sd_tr[4];
     my_transaction rd_get[4];
     logic [47:0] que[4][4][$];
-    logic [3:0] port_round[4];
+    logic [1:0] port_round[4];
     logic [2:0] port_reach[4];
     logic [2:0] tmp_prior[4];
     logic [2:0] big_prior[4];
@@ -54,16 +54,16 @@ task my_model::main_phase(uvm_phase phase);
         for(int i=0; i<4; i=i+1) begin
             port[i].get(tr[i]);
             if(tr[i].vld) begin
-                que[tr[i].ctrl[3:0]][tr[i].ctrl[6:4]].push_back(tr[i].ctrl);
-                for(int j=port_round[tr[i].ctrl[3:0]]; j<4; j=j+1) begin
-                    if(que[tr[i].ctrl[3:0]][j].size() != 0) begin
-                        if(tr[i].ctrl[6:4] == j && que[tr[i].ctrl[3:0]][j].size() == 1)
-                            port_reach[tr[i].ctrl[3:0]] = j;
+                que[tr[i].ctrl[1:0]][tr[i].ctrl[3:2]].push_back(tr[i].ctrl);
+                for(int j=port_round[tr[i].ctrl[1:0]]; j<4; j=j+1) begin
+                    if(que[tr[i].ctrl[1:0]][j].size() != 0) begin
+                        if(tr[i].ctrl[3:2] == j && que[tr[i].ctrl[1:0]][j].size() == 1)
+                            port_reach[tr[i].ctrl[1:0]] = j;
                         break;
                     end
                 end
-                //if(tr[i].ctrl[3:0] == 7)
-                //    $display("port_in = %d %d %d %d",i,tr[i].ctrl[3:0],tr[i].ctrl[6:4],port_reach[tr[i].ctrl[3:0]]);
+                //if(tr[i].ctrl[1:0] == 7)
+                //$display("port_in = %d %d %d %d",i,tr[i].ctrl[1:0],tr[i].ctrl[3:2],port_reach[tr[i].ctrl[1:0]]);
             end
         end
         for(int i=0; i<4; i=i+1) begin
@@ -72,7 +72,7 @@ task my_model::main_phase(uvm_phase phase);
                 //$display("i = %d %d %d %d",i,port_reach[i],que[i][port_reach[i]][0],que[i][port_reach[i]].size());
             if(rd_tr[i].rd_ready && que[i][port_reach[i]].size() > 0) begin
                 `uvm_info("my_model","begin to collect one pkt",UVM_LOW);
-                $display("i = %d %d %d %d",i,port_reach[i],que[i][port_reach[i]][0],que[i][port_reach[i]].size());
+                $display("i = %d %d %b %d",i,port_reach[i],que[i][port_reach[i]][0],que[i][port_reach[i]].size());
                 sd_tr[i] = new($sformatf("sd_tr[%0d]", i));
                 sd_tr[i].ctrl = que[i][port_reach[i]].pop_front();
                 sd_tr[i].vld = 1;

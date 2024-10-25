@@ -34,7 +34,7 @@ hydra my_dut
     .wr_data ({input_if[3].wr_data,input_if[2].wr_data,input_if[1].wr_data,input_if[0].wr_data}),
     .pause ({input_if[3].pause,input_if[2].pause,input_if[1].pause,input_if[0].pause}),
 
-    .wrr_en (16'hFFFF),
+    .wrr_en (4'hF),
     .match_threshold (20),
     .match_mode (2),
     
@@ -89,7 +89,7 @@ always #(T/2) clk <= ~clk;
 generate
     for(genvar i=0; i<4; i=i+1) begin
         initial begin
-            #70009
+            #3009
             output_if[i].ready <= 1;
         end
 

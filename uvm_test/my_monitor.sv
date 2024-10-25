@@ -134,8 +134,8 @@ task my_monitor_out::collect_one_pkt(my_transaction tr);
                     //ap.write(tr);    
                     if(vif.rd_eop) break;
                 end
-                if(len - 1 != tr.ctrl[15:7]) begin
-                    $display("len = %d %d %d",len - 1,tr.ctrl[15:7],tr.ctrl);
+                if(len - 1 != tr.ctrl[11:4]) begin
+                    $display("len = %d %d %d",len - 1,tr.ctrl[11:4],tr.ctrl);
                     `uvm_fatal("my_monitor_out","length not right!");
                 end
                 `uvm_info("my_monitor_out","end collect one pkt",UVM_LOW);

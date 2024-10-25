@@ -50,8 +50,8 @@ task my_scoreboard::main_phase(uvm_phase phase);
         while(1) begin
             act_port.get(get_actual);
             if(expect_queue.size() > 0 && get_actual.vld) begin
-                $display("acutal = %d %d %d %d",get_actual.ctrl[3:0],
-                get_actual.ctrl,get_actual.vld,get_actual.ctrl[6:4]);
+                $display("acutal = %d %d %d %d",get_actual.ctrl[1:0],
+                get_actual.ctrl,get_actual.vld,get_actual.ctrl[3:2]);
                 tmp_tran = expect_queue[0];
                 //ap.write(get_actual);
                 //exp_port_1.get(tmp_tran);
@@ -60,15 +60,15 @@ task my_scoreboard::main_phase(uvm_phase phase);
                     `uvm_info("my_scoreboard","Compare SUCCESSFULLY",UVM_LOW);
                     expect_queue.pop_front();
                     num_suc = num_suc + 1;
-                    $display("Successful packet number is: %d",num_suc);
+                    //$display("Successful packet number is: %d",num_suc);
                 end else begin
-                    $display("the expect pkt is %d %d",tmp_tran,tmp_tran[6:4]);
+                    $display("the expect pkt is %d %d",tmp_tran,tmp_tran[3:2]);
                     $display("the actural pkt is %d %d %d"
-                    ,get_actual.ctrl,expect_queue.size(),get_actual.ctrl[6:4]);
+                    ,get_actual.ctrl,expect_queue.size(),get_actual.ctrl[3:2]);
                     `uvm_error("my_scoreboard","Com pare FAILED");
                     expect_queue.pop_front();
                     num_err = num_err + 1;
-                    $display("Failed packet number is: %d",num_err);
+                    //$display("Failed packet number is: %d",num_err);
                 end
             end else if(get_actual.vld) begin
                 $display("the unexpected pkt is %d",get_actual.ctrl);

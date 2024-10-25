@@ -36,13 +36,14 @@ task my_driver::drive_one_pkt(my_transaction tr);
     //$display("vif.clk = %d %d",vif.clk,time_stamp);
     vif.time_stamp = tr.ctrl[47:16];
     @(posedge vif.clk); vif.wr_sop <= 1;
+    //if(vr == 0) vif.wr_sop <= 1;
     @(posedge vif.clk); vif.wr_sop <= 0;
     @(posedge vif.clk);
     vif.wr_vld <= 1;
     vif.wr_data <= tr.ctrl;
     //vif.wr_data[6:0] <= $random;
     //$display("data_size = %d",tr.ctrl);
-    for(int i=0; i<tr.ctrl[15:7]; i=i+1) begin
+    for(int i=0; i<tr.ctrl[11:4]; i=i+1) begin
         while(vif.pause) begin
             @(posedge vif.clk);
         end
@@ -71,8 +72,8 @@ task my_driver::main_phase(uvm_phase phase);
             time_stamp = time_stamp + 1;
             @(posedge vif.clk);
         end
-        for(int i = 0; i < 100; i = i + 1) begin
-            while(vr[3:0] != (time_stamp[4:0] >> 1)) begin
+        for(int i = 0; i < 50; i = i + 1) begin
+            while(vr[1:0] != (time_stamp[4:0] >> 1)) begin
                 @(posedge vif.clk);
             end
             len = $random;
@@ -80,15 +81,19 @@ task my_driver::main_phase(uvm_phase phase);
             tr = new("tr");
             tr.ctrl = len;
             tr.vld = 0;
-            if(len < 31) len = 31;
-            if(len > 1023) len = 1023;
-            tr.ctrl[15:7] = len;
+            if(len < 32) len = 32;
+            if(len > 32) len = 32;
+            tr.ctrl[11:4] = len;
             /*if(vr < 7) begin
                 //tr.ctrl[6:4] = 1;
-                tr.ctrl[3:0] = 1;
+                tr.ctrl[1:0] = 1;
             end else if(vr < 14) begin
-                tr.ctrl[3:0] = 2;
+                tr.ctrl[1:0] = 2;
             end*/
+            //tr.ctrl[6:4] = tr.ctrl[6:4] >> 1;
+            //tr.ctrl[1:0] = tr.ctrl[1:0] >> 2;
+            //tr.ctrl[3:2] = 0;
+            tr.ctrl[1:0] = vr;
             tr.ctrl[47:16] = time_stamp;
             drive_one_pkt(tr);
             
